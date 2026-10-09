@@ -15,6 +15,22 @@ class Recipe {
         return $stmt->fetchAll();
     }
 
+    public function getById($id) {
+        $stmt = $this->db->prepare("SELECT r.*, u.username, c.name AS category_name 
+                                    FROM recipes r
+                                    JOIN users u ON r.user_id = u.id
+                                    JOIN categories c ON r.category_id = c.id
+                                    WHERE r.id = :id");
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch();
+    }
+
+    public function getIngredients($recipeId) {
+        $stmt = $this->db->prepare("SELECT * FROM ingredients WHERE recipe_id = :recipe_id ORDER BY id ASC");
+        $stmt->execute([':recipe_id' => $recipeId]);
+        return $stmt->fetchAll();
+    }
+
     public function getAll($keyword = '', $category_id = 0, $max_cost = 0) {
         $sql = "SELECT r.*, u.username, c.name AS category_name 
                 FROM recipes r
@@ -46,25 +62,6 @@ class Recipe {
         return $stmt->fetchAll();
     }
 
-    public function getUserFavorites($userId) {
-        $sql = "SELECT r.*, u.username, c.name AS category_name 
-                FROM favorites f
-                JOIN recipes r ON f.recipe_id = r.id
-                JOIN users u ON r.user_id = u.id
-                JOIN categories c ON r.category_id = c.id
-                WHERE f.user_id = :user_id
-                ORDER BY f.created_at DESC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':user_id' => $userId]);
-        return $stmt->fetchAll();
-    }
-
-    public function isFavorited($userId, $recipeId) {
-        $stmt = $this->db->prepare("SELECT 1 FROM favorites WHERE user_id = :u AND recipe_id = :r");
-        $stmt->execute([':u' => $userId, ':r' => $recipeId]);
-        return (bool)$stmt->fetch();
-    }
-
     public function create($userId, $categoryId, $title, $description, $cookingSteps, $cookingTime, $estimatedCost, $ingredients) {
         $this->db->beginTransaction();
         try {
@@ -93,5 +90,24 @@ class Recipe {
             $this->db->rollBack();
             return false;
         }
+    }
+
+    public function getUserFavorites($userId) {
+        $sql = "SELECT r.*, u.username, c.name AS category_name 
+                FROM favorites f
+                JOIN recipes r ON f.recipe_id = r.id
+                JOIN users u ON r.user_id = u.id
+                JOIN categories c ON r.category_id = c.id
+                WHERE f.user_id = :user_id
+                ORDER BY f.created_at DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':user_id' => $userId]);
+        return $stmt->fetchAll();
+    }
+
+    public function isFavorited($userId, $recipeId) {
+        $stmt = $this->db->prepare("SELECT 1 FROM favorites WHERE user_id = :u AND recipe_id = :r");
+        $stmt->execute([':u' => $userId, ':r' => $recipeId]);
+        return (bool)$stmt->fetch();
     }
 }
